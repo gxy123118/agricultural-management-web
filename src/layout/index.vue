@@ -2,7 +2,7 @@
   <div class="app-wrapper">
     <div class="sidebar-container">
       <div class="logo-container">
-        <h1>农业管理系统</h1>
+        <h1>农资管理系统</h1>
       </div>
       <el-menu
           :default-active="activeMenu"

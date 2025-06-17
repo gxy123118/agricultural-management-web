@@ -1,23 +1,23 @@
 <template>
   <div class="app-container">
-    <div class="filter-container">
-      <el-date-picker
-        v-model="dateRange"
-        type="daterange"
-        range-separator="至"
-        start-placeholder="开始日期"
-        end-placeholder="结束日期"
-        value-format="YYYY-MM-DD"
-        class="filter-item"
-        style="width: 350px"
-      />
-      <el-button
-        class="filter-item"
-        type="primary"
-        icon="Search"
-        @click="getStatistics"
-      >查询统计</el-button>
-    </div>
+<!--    <div class="filter-container">-->
+<!--      <el-date-picker-->
+<!--        v-model="dateRange"-->
+<!--        type="daterange"-->
+<!--        range-separator="至"-->
+<!--        start-placeholder="开始日期"-->
+<!--        end-placeholder="结束日期"-->
+<!--        value-format="YYYY-MM-DD"-->
+<!--        class="filter-item"-->
+<!--        style="width: 350px"-->
+<!--      />-->
+<!--      <el-button-->
+<!--        class="filter-item"-->
+<!--        type="primary"-->
+<!--        icon="Search"-->
+<!--        @click="getStatistics"-->
+<!--      >查询统计</el-button>-->
+<!--    </div>-->
 
     <!-- 概览卡片 -->
     <el-row :gutter="20" class="overview-cards">
@@ -76,7 +76,7 @@
     </el-row>
 
     <!-- 图表区域 -->
-    <el-row :gutter="20" class="charts-container">
+    <el-row :gutter="40" class="charts-container">
       <!-- 采购销售趋势对比 -->
       <el-col :span="12">
         <el-card>
@@ -88,7 +88,7 @@
           <div ref="trendChart" style="height: 400px;"></div>
         </el-card>
       </el-col>
-      
+
       <!-- 采购销售占比 -->
       <el-col :span="12">
         <el-card>
@@ -98,32 +98,6 @@
             </div>
           </template>
           <div ref="pieChart" style="height: 400px;"></div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-row :gutter="20" class="charts-container">
-      <!-- 月度对比 -->
-      <el-col :span="12">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>月度采购销售对比</span>
-            </div>
-          </template>
-          <div ref="monthlyChart" style="height: 400px;"></div>
-        </el-card>
-      </el-col>
-      
-      <!-- 利润分析 -->
-      <el-col :span="12">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>利润分析</span>
-            </div>
-          </template>
-          <div ref="profitChart" style="height: 400px;"></div>
         </el-card>
       </el-col>
     </el-row>
@@ -142,8 +116,6 @@ import { getSalesStatistics } from '@/api/sales'
 const dateRange = ref([])
 const trendChart = ref(null)
 const pieChart = ref(null)
-const monthlyChart = ref(null)
-const profitChart = ref(null)
 
 const procurementStats = reactive({
   totalAmount: 0,
@@ -160,10 +132,12 @@ const salesStats = reactive({
 // 图表实例
 let trendChartInstance = null
 let pieChartInstance = null
-let monthlyChartInstance = null
-let profitChartInstance = null
 
 // 方法
+// 将这两个变量移到 setup 顶层
+let procurementResponse = null;
+let salesResponse = null;
+
 const getStatistics = async () => {
   try {
     const params = {}
@@ -173,14 +147,14 @@ const getStatistics = async () => {
     }
 
     // 获取采购统计
-    const procurementResponse = await getProcurementStatistics(params)
-    console.log('采购统计响应:', procurementResponse)
-    if (procurementResponse.code == 200) {
-      // 处理BigDecimal类型 - 转换为字符串再转数字
-      procurementStats.totalAmount = parseFloat(String(procurementResponse.data.totalAmount)) || 0
-      procurementStats.orderCount = parseInt(String(procurementResponse.data.orderCount)) || 0
-      procurementStats.averagePrice = parseFloat(String(procurementResponse.data.averagePrice)) || 0
-      
+    const procResponse = await getProcurementStatistics(params) // 使用局部变量接收
+    console.log('采购统计响应:', procResponse)
+    if (procResponse.code == 200) {
+      procurementResponse = procResponse; // 赋值给顶层变量
+      procurementStats.totalAmount = parseFloat(String(procResponse.data.totalAmount)) || 0
+      procurementStats.orderCount = parseInt(String(procResponse.data.orderCount)) || 0
+      procurementStats.averagePrice = parseFloat(String(procResponse.data.averagePrice)) || 0
+
       console.log('采购统计更新后:', {
         totalAmount: procurementStats.totalAmount,
         orderCount: procurementStats.orderCount,
@@ -189,14 +163,13 @@ const getStatistics = async () => {
     }
 
     // 获取销售统计
-    const salesResponse = await getSalesStatistics(params)
-    console.log('销售统计响应:', salesResponse)
-    if (salesResponse.code == 200) {
-
-      // 处理BigDecimal类型 - 转换为字符串再转数字
-      salesStats.totalAmount = parseFloat(String(salesResponse.data.totalAmount)) || 0
-      salesStats.orderCount = parseInt(String(salesResponse.data.orderCount)) || 0
-      salesStats.averagePrice = parseFloat(String(salesResponse.data.averagePrice)) || 0
+    const salResponse = await getSalesStatistics(params) // 使用局部变量接收
+    console.log('销售统计响应:', salResponse)
+    if (salResponse.code == 200) {
+      salesResponse = salResponse; // 赋值给顶层变量
+      salesStats.totalAmount = parseFloat(String(salResponse.data.totalAmount)) || 0
+      salesStats.orderCount = parseInt(String(salResponse.data.orderCount)) || 0
+      salesStats.averagePrice = parseFloat(String(salResponse.data.averagePrice)) || 0
 
       console.log('销售统计更新后:', {
         totalAmount: salesStats.totalAmount,
@@ -207,7 +180,7 @@ const getStatistics = async () => {
 
     // 强制触发视图更新
     await nextTick()
-    updateCharts()
+    updateCharts() // 现在 updateCharts 可以访问到顶层的 procurementResponse 和 salesResponse
   } catch (error) {
     console.error('获取统计数据失败:', error)
     ElMessage.error('获取统计数据失败')
@@ -222,21 +195,48 @@ const formatNumber = (num) => {
 const initCharts = () => {
   // 趋势对比图
   trendChartInstance = echarts.init(trendChart.value)
-  
+
   // 饼图
   pieChartInstance = echarts.init(pieChart.value)
-  
-  // 月度对比图
-  monthlyChartInstance = echarts.init(monthlyChart.value)
-  
-  // 利润分析图
-  profitChartInstance = echarts.init(profitChart.value)
-  
+
   updateCharts()
 }
 
 const updateCharts = () => {
-  // 趋势对比图配置
+  // 处理月度数据
+  const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+  
+  // 初始化月度数据数组
+  const procurementMonthlyAmounts = Array(12).fill(0);
+  const salesMonthlyAmounts = Array(12).fill(0);
+  
+  // 处理采购数据
+  // 确保 procurementResponse 和 salesResponse 不是 null 或 undefined
+  const procurementData = procurementResponse?.data?.monthlyData || [];
+  procurementData.forEach(item => {
+    if (item.type === '采购') {
+      const monthStr = item.month.split('-')[1];
+      const monthIndex = parseInt(monthStr, 10) - 1;
+      if (monthIndex >= 0 && monthIndex < 12) {
+        procurementMonthlyAmounts[monthIndex] = parseFloat(item.amount) || 0;
+      }
+    }
+  });
+  
+  // 处理销售数据
+  const salesData = salesResponse?.data?.monthlyData || [];
+  salesData.forEach(item => {
+    if (item.type === '销售') {
+      const monthStr = item.month.split('-')[1];
+      const monthIndex = parseInt(monthStr, 10) - 1;
+      if (monthIndex >= 0 && monthIndex < 12) {
+        salesMonthlyAmounts[monthIndex] = parseFloat(item.amount) || 0;
+      }
+    }
+  });
+  
+  const xAxisLabels = months.map(month => `${month}月`);
+  
   const trendOption = {
     title: {
       text: '采购销售趋势'
@@ -249,7 +249,7 @@ const updateCharts = () => {
     },
     xAxis: {
       type: 'category',
-      data: ['1月', '2月', '3月', '4月', '5月', '6月']
+      data: xAxisLabels
     },
     yAxis: {
       type: 'value',
@@ -261,18 +261,18 @@ const updateCharts = () => {
       {
         name: '采购金额',
         type: 'line',
-        data: [12000, 15000, 18000, 16000, 20000, 22000],
+        data: procurementMonthlyAmounts,
         itemStyle: { color: '#ff6b6b' }
       },
       {
         name: '销售金额',
         type: 'line',
-        data: [15000, 18000, 22000, 20000, 25000, 28000],
+        data: salesMonthlyAmounts,
         itemStyle: { color: '#4ecdc4' }
       }
     ]
   }
-  
+
   // 饼图配置
   const pieOption = {
     title: {
@@ -302,82 +302,9 @@ const updateCharts = () => {
       }
     ]
   }
-  
-  // 月度对比图配置
-  const monthlyOption = {
-    title: {
-      text: '月度对比'
-    },
-    tooltip: {
-      trigger: 'axis'
-    },
-    legend: {
-      data: ['采购', '销售', '利润']
-    },
-    xAxis: {
-      type: 'category',
-      data: ['1月', '2月', '3月', '4月', '5月', '6月']
-    },
-    yAxis: {
-      type: 'value'
-    },
-    series: [
-      {
-        name: '采购',
-        type: 'bar',
-        data: [12000, 15000, 18000, 16000, 20000, 22000],
-        itemStyle: { color: '#ff6b6b' }
-      },
-      {
-        name: '销售',
-        type: 'bar',
-        data: [15000, 18000, 22000, 20000, 25000, 28000],
-        itemStyle: { color: '#4ecdc4' }
-      },
-      {
-        name: '利润',
-        type: 'bar',
-        data: [3000, 3000, 4000, 4000, 5000, 6000],
-        itemStyle: { color: '#45b7d1' }
-      }
-    ]
-  }
-  
-  // 利润分析图配置
-  const profitOption = {
-    title: {
-      text: '利润分析'
-    },
-    tooltip: {
-      trigger: 'axis'
-    },
-    xAxis: {
-      type: 'category',
-      data: ['1月', '2月', '3月', '4月', '5月', '6月']
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: {
-        formatter: '¥{value}'
-      }
-    },
-    series: [
-      {
-        name: '利润',
-        type: 'line',
-        data: [3000, 3000, 4000, 4000, 5000, 6000],
-        itemStyle: { color: '#45b7d1' },
-        areaStyle: {
-          color: 'rgba(69, 183, 209, 0.3)'
-        }
-      }
-    ]
-  }
-  
+
   trendChartInstance?.setOption(trendOption)
   pieChartInstance?.setOption(pieOption)
-  monthlyChartInstance?.setOption(monthlyOption)
-  profitChartInstance?.setOption(profitOption)
 }
 
 // 生命周期
@@ -385,7 +312,7 @@ onMounted(async () => {
   await getStatistics()
   await nextTick()
   initCharts()
-  
+
   // 监听窗口大小变化
   window.addEventListener('resize', () => {
     trendChartInstance?.resize()

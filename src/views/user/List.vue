@@ -40,15 +40,18 @@
       <el-table-column label="操作" align="center" width="230">
         <template #default="{row}">
           <el-button
+            v-if="isAdmin"
             type="primary"
             size="small"
             @click="handleUpdate(row)"
           >编辑</el-button>
           <el-button
+            v-if="isAdmin"
             type="danger"
             size="small"
             @click="handleDelete(row)"
           >删除</el-button>
+          <span v-else class="permission-tip">无操作权限</span>
         </template>
       </el-table-column>
     </el-table>
@@ -94,8 +97,7 @@
         </el-form-item>
         <el-form-item label="角色" prop="roleId">
           <el-select v-model="temp.roleId" placeholder="请选择角色">
-            <el-option label="管理员" :value="1" />
-            <el-option label="普通用户" :value="2" />
+            <el-option label="管理员" :value="2" />
           </el-select>
         </el-form-item>
         <el-form-item label="备注" prop="remark">
@@ -113,9 +115,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { listUsers, addUser, updateUser, deleteUser } from '@/api/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/store/user'
+
+// 获取用户store
+const userStore = useUserStore()
+
+// 判断当前用户是否为管理员
+const isAdmin = computed(() => {
+  return userStore.userInfo && userStore.userInfo.roleId === 1
+})
 
 // 列表数据
 const list = ref([])
@@ -200,6 +211,15 @@ const resetTemp = () => {
 
 // 添加用户
 const handleCreate = () => {
+  // 检查权限
+  if (!isAdmin.value) {
+    ElMessage({
+      message: '只有超级管理员才能添加用户',
+      type: 'warning'
+    })
+    return
+  }
+  
   resetTemp()
   dialogStatus.value = 'create'
   dialogFormVisible.value = true
@@ -318,5 +338,11 @@ onMounted(() => {
 
 :deep(.el-button) {
   margin-left: 5px;
+}
+
+/* 权限提示样式 */
+.permission-tip {
+  color: #909399;
+  font-size: 14px;
 }
 </style>

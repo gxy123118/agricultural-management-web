@@ -5,12 +5,12 @@
         <el-card>
           <template #header>
             <div class="card-header">
-              <span>欢迎使用农业管理系统</span>
+              <span>欢迎使用农资管理系统</span>
             </div>
           </template>
           <div class="welcome-content">
             <h2>您好，{{ userInfo.realName || userInfo.username }}</h2>
-            <p>欢迎登录农业管理系统，您可以在左侧菜单中选择功能模块进行操作。</p>
+            <p>欢迎登录农资管理系统，您可以在左侧菜单中选择功能模块进行操作。</p>
           </div>
         </el-card>
       </el-col>

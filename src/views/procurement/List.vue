@@ -398,6 +398,14 @@ const getMaterialOptions = async () => {
 // 搜索
 const handleFilter = () => {
   listQuery.current = 1
+  // 确保日期范围参数被正确设置
+  if (dateRange.value && dateRange.value.length === 2) {
+    listQuery.startDate = dateRange.value[0]
+    listQuery.endDate = dateRange.value[1]
+  } else {
+    listQuery.startDate = ''
+    listQuery.endDate = ''
+  }
   getList()
 }
 
