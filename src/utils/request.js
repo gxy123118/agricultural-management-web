@@ -7,13 +7,12 @@ const service = axios.create({
   timeout: 5000 // 请求超时时间
 })
 
-// 请求拦截器
 service.interceptors.request.use(
   config => {
     // 在发送请求之前做些什么
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('satoken') // 改为satoken，与后端配置一致
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`
+      config.headers['satoken'] = token // 使用satoken作为header名称
     }
     return config
   },
@@ -30,6 +29,12 @@ service.interceptors.response.use(
     const res = response.data
     // 如果返回的状态码不是200，说明接口请求有误
     if (res.code !== 200) {
+      // 如果是401未授权，清除token并跳转登录
+      if (response.status === 401) {
+        localStorage.removeItem('satoken')
+        // 这里可以添加跳转到登录页的逻辑
+        return Promise.reject(new Error('未授权，请重新登录'))
+      }
       ElMessage({
         message: res.message || '请求错误',
         type: 'error',
@@ -42,11 +47,21 @@ service.interceptors.response.use(
   },
   error => {
     console.log('err' + error)
-    ElMessage({
-      message: error.message,
-      type: 'error',
-      duration: 5 * 1000
-    })
+    // 处理401未授权错误
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('satoken')
+      ElMessage({
+        message: '登录已过期，请重新登录',
+        type: 'error',
+        duration: 5 * 1000
+      })
+    } else {
+      ElMessage({
+        message: error.message,
+        type: 'error',
+        duration: 5 * 1000
+      })
+    }
     return Promise.reject(error)
   }
 )
