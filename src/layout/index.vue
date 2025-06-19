@@ -2,6 +2,7 @@
   <div class="app-wrapper">
     <div class="sidebar-container">
       <div class="logo-container">
+        <img src="/favicon.ico" alt="Logo" class="logo-icon" />
         <h1>农资管理系统</h1>
       </div>
       <el-menu
@@ -172,27 +173,39 @@ const logout = () => {
 }
 
 .sidebar-container {
-  width: 220px; /* 稍微宽一点 */
+  width: 220px;
   height: 100%;
   background-color: #304156;
   transition: width 0.28s;
   overflow-y: auto;
-  box-shadow: 2px 0 6px rgba(0, 21, 41, .15); /* 添加阴影效果 */
+  box-shadow: 2px 0 6px rgba(0, 21, 41, .15);
 }
 
 .logo-container {
-  height: 60px; /* 增加高度 */
+  height: 60px;
   padding: 10px;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12px;
+  background-color: #ffffff; /* 改为白色背景 */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1); /* 改为浅灰色边框 */
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  /* 移除filter，保持原始图标颜色 */
 }
 
 .logo-container h1 {
-  color: #fff;
-  font-size: 20px; /* 增大字体 */
+  color: #333333; /* 改为深灰色文字 */
+  font-size: 20px;
   margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .main-container {
