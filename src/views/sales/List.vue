@@ -126,7 +126,16 @@
           <h3>销售明细</h3>
           <el-table :data="currentSales.items" border>
             <el-table-column label="物资名称" prop="materialName" align="center" />
-            <el-table-column label="数量" prop="eachAmount" align="center" />
+            <el-table-column label="单价" align="center">
+              <template #default="{row}">
+                {{ row.eachAmount ? `¥${row.eachAmount}` : '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="数量" prop="quantity" align="center">
+              <template #default="{row}">
+                {{ row.quantity || 1 }}
+              </template>
+            </el-table-column>
             <el-table-column label="备注" prop="remark" align="center" />
           </el-table>
         </div>
@@ -149,15 +158,19 @@
         <el-form-item label="单据编号" prop="billNo">
           <el-input v-model="temp.billNo" placeholder="请输入单据编号" />
         </el-form-item>
-        <el-form-item label="客户" prop="organId">
-          <el-select v-model="temp.organId" placeholder="请选择客户" style="width: 100%">
-            <el-option
-              v-for="item in customerOptions"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </el-select>
+        <el-form-item label="客户" prop="organName">
+          <el-autocomplete
+            v-model="temp.organName"
+            :fetch-suggestions="queryCustomers"
+            placeholder="请选择或输入客户"
+            style="width: 100%"
+            @select="handleCustomerSelect"
+            clearable
+          >
+            <template #default="{ item }">
+              <div>{{ item.name }}</div>
+            </template>
+          </el-autocomplete>
         </el-form-item>
         <el-form-item label="经手人" prop="handsPersonId">
           <el-select v-model="temp.handsPersonId" placeholder="请选择经手人" style="width: 100%">
@@ -213,9 +226,14 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="数量" align="center" width="150">
+            <el-table-column label="单价" align="center" width="120">
               <template #default="{row}">
                 <el-input-number v-model="row.eachAmount" :min="0.01" :precision="2" style="width: 100%" />
+              </template>
+            </el-table-column>
+            <el-table-column label="数量" align="center" width="120">
+              <template #default="{row}">
+                <el-input-number v-model="row.quantity" :min="1" :precision="0" style="width: 100%" :default-value="1" />
               </template>
             </el-table-column>
             <el-table-column label="备注" align="center">
@@ -242,7 +260,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import {
   createSales,
   updateSales,
@@ -250,10 +268,10 @@ import {
   getSalesPage,
   getSalesDetail
 } from '@/api/sales'
-import { listCustomers } from '@/api/customer'
+import { listCustomers, addCustomer } from '@/api/customer'
 import { listUsers } from '@/api/user'
 import { listAccounts } from '@/api/account'
-import { getMaterialPage } from '@/api/material'
+import { listMaterials } from '@/api/material'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 // 列表数据
@@ -285,6 +303,7 @@ const temp = reactive({
   id: undefined,
   type: 'SALES', // 销售类型
   organId: undefined,
+  organName: '', // 新增客户名称字段
   handsPersonId: undefined,
   changeAmount: 0,
   totalPrice: 0,
@@ -310,7 +329,7 @@ const currentSales = reactive({
 // 表单校验规则
 const rules = {
   billNo: [{ required: true, message: '请输入单据编号', trigger: 'blur' }],
-  organId: [{ required: true, message: '请选择客户', trigger: 'change' }],
+  organName: [{ required: true, message: '请选择或输入客户', trigger: 'blur' }],
   handsPersonId: [{ required: true, message: '请选择经手人', trigger: 'change' }],
   accountId: [{ required: true, message: '请选择结算账户', trigger: 'change' }],
   billTime: [{ required: true, message: '请选择单据日期', trigger: 'change' }],
@@ -388,7 +407,7 @@ const getAccountOptions = async () => {
 // 获取物资选项
 const getMaterialOptions = async () => {
   try {
-    const response = await getMaterialPage({ current: 1, size: 100 })
+    const response = await listMaterials({ current: 1, size: 100 })
     materialOptions.value = response.data.records || []
   } catch (error) {
     console.error('获取物资选项失败:', error)
@@ -420,12 +439,46 @@ const handleCurrentChange = (val) => {
   getList()
 }
 
+// 客户搜索
+const queryCustomers = (queryString, callback) => {
+  const results = queryString
+    ? customerOptions.value.filter(item => 
+        item.name && item.name.toLowerCase().includes(queryString.toLowerCase()))
+    : customerOptions.value
+  
+  // 如果输入的是一个新客户名称，添加一个创建选项
+  if (queryString && !results.some(item => item.name === queryString)) {
+    results.push({
+      name: queryString,
+      isNew: true // 标记为新创建的客户
+    })
+  }
+  
+  callback(results)
+}
+
+// 处理客户选择
+const handleCustomerSelect = (item) => {
+  if (item) {
+    if (item.isNew) {
+      // 用户选择了创建新客户选项
+      temp.organId = undefined // 清除ID，表示这是一个新客户
+      temp.organName = item.name
+    } else if (item.id) {
+      // 用户选择了现有客户
+      temp.organId = item.id
+      temp.organName = item.name
+    }
+  }
+}
+
 // 重置表单
 const resetTemp = () => {
   Object.assign(temp, {
     id: undefined,
     type: 'SALES',
     organId: undefined,
+    organName: '',
     handsPersonId: undefined,
     changeAmount: 0,
     totalPrice: 0,
@@ -452,7 +505,8 @@ const addItem = () => {
   temp.items.push({
     accountId: temp.accountId,
     inoutItemId: undefined,
-    eachAmount: 1,
+    eachAmount: 0,
+    quantity: 1,
     remark: ''
   })
 }
@@ -480,24 +534,64 @@ const handleCreate = () => {
 const createData = async () => {
   try {
     await dataFormRef.value.validate()
-
+    
     // 验证明细项
     if (temp.items.length === 0) {
       ElMessage.warning('请至少添加一个销售明细项')
       return
     }
-
+    
     for (const item of temp.items) {
       if (!item.inoutItemId) {
         ElMessage.warning('请选择销售物资')
         return
       }
       if (!item.eachAmount || item.eachAmount <= 0) {
+        ElMessage.warning('请输入有效的销售单价')
+        return
+      }
+      if (!item.quantity || item.quantity <= 0) {
         ElMessage.warning('请输入有效的销售数量')
         return
       }
+      
+      // 将数量值保存到eachAmount字段，用于后端处理
+      const price = item.eachAmount
+      item.eachAmount = item.quantity
+      // 保存单价到quantity字段，仅用于前端展示
+      item.quantity = price
     }
-
+    
+    // 确保客户ID存在
+    if (!temp.organId && temp.organName) {
+      try {
+        // 如果没有选择现有客户，则创建新客户
+        const newCustomer = await addCustomer({
+          name: temp.organName,
+          phone: ''
+        })
+        if (newCustomer.code === 200 && newCustomer.data) {
+          temp.organId = newCustomer.data.id
+          // 记录客户名称，确保在创建后能显示
+          const customerName = temp.organName
+          // 更新客户选项列表
+          await getCustomerOptions()
+          // 确保客户名称被保存
+          temp.organName = customerName
+        } else {
+          ElMessage.warning('创建客户失败')
+          return
+        }
+      } catch (error) {
+        console.error('创建客户失败:', error)
+        ElMessage.warning('创建客户失败: ' + (error.message || '未知错误'))
+        return
+      }
+    } else if (!temp.organId && !temp.organName) {
+      ElMessage.warning('请选择或输入客户')
+      return
+    }
+    
     const response = await createSales(temp)
     if (response.code === 200 && response.data) {
       dialogFormVisible.value = false
@@ -531,6 +625,10 @@ const handleUpdate = async (row) => {
     const response = await getSalesDetail(row.id)
     if (response.code === 200 && response.data) {
       Object.assign(temp, response.data)
+      // 确保organName字段正确设置
+      if (response.data.organName) {
+        temp.organName = response.data.organName
+      }
       dialogStatus.value = 'update'
       dialogFormVisible.value = true
       // 下一帧执行，确保DOM更新后再设置焦点
@@ -549,24 +647,64 @@ const handleUpdate = async (row) => {
 const updateData = async () => {
   try {
     await dataFormRef.value.validate()
-
+    
     // 验证明细项
     if (temp.items.length === 0) {
       ElMessage.warning('请至少添加一个销售明细项')
       return
     }
-
+    
     for (const item of temp.items) {
       if (!item.inoutItemId) {
         ElMessage.warning('请选择销售物资')
         return
       }
       if (!item.eachAmount || item.eachAmount <= 0) {
+        ElMessage.warning('请输入有效的销售单价')
+        return
+      }
+      if (!item.quantity || item.quantity <= 0) {
         ElMessage.warning('请输入有效的销售数量')
         return
       }
+      
+      // 将数量值保存到eachAmount字段，用于后端处理
+      const price = item.eachAmount
+      item.eachAmount = item.quantity
+      // 保存单价到quantity字段，仅用于前端展示
+      item.quantity = price
     }
-
+    
+    // 确保客户ID存在
+    if (!temp.organId && temp.organName) {
+      try {
+        // 如果没有选择现有客户，则创建新客户
+        const newCustomer = await addCustomer({
+          name: temp.organName,
+          phone: ''
+        })
+        if (newCustomer.code === 200 && newCustomer.data) {
+          temp.organId = newCustomer.data.id
+          // 记录客户名称，确保在创建后能显示
+          const customerName = temp.organName
+          // 更新客户选项列表
+          await getCustomerOptions()
+          // 确保客户名称被保存
+          temp.organName = customerName
+        } else {
+          ElMessage.warning('创建客户失败')
+          return
+        }
+      } catch (error) {
+        console.error('创建客户失败:', error)
+        ElMessage.warning('创建客户失败: ' + (error.message || '未知错误'))
+        return
+      }
+    } else if (!temp.organId && !temp.organName) {
+      ElMessage.warning('请选择或输入客户')
+      return
+    }
+    
     const response = await updateSales(temp.id, temp)
     if (response.code === 200 && response.data) {
       dialogFormVisible.value = false

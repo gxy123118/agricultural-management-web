@@ -53,8 +53,8 @@ export function deleteCategory(id) {
   })
 }
 
-// 物资信息API
-export function getMaterialPage(params) {
+// 物资API
+export function listMaterials(params) {
   return request({
     url: '/api/material/page',
     method: 'get',
@@ -62,25 +62,10 @@ export function getMaterialPage(params) {
   })
 }
 
-export function getMaterialsByCategory(categoryId) {
-  return request({
-    url: `/api/material/category/${categoryId}`,
-    method: 'get'
-  })
-}
-
 export function getMaterialDetail(id) {
   return request({
     url: `/api/material/detail/${id}`,
     method: 'get'
-  })
-}
-
-export function getLowStockMaterials(params) {
-  return request({
-    url: '/api/material/low-stock',
-    method: 'get',
-    params
   })
 }
 
@@ -107,10 +92,18 @@ export function deleteMaterial(id) {
   })
 }
 
-export function updateStock(params) {
+export function getLowStockMaterials(params) {
+  return request({
+    url: '/api/material/low-stock',
+    method: 'get',
+    params
+  })
+}
+
+export function updateStock(data) {
   return request({
     url: '/api/material/stock/update',
     method: 'post',
-    params
+    data
   })
 }

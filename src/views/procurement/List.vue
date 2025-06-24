@@ -126,7 +126,16 @@
           <h3>采购明细</h3>
           <el-table :data="currentProcurement.items" border>
             <el-table-column label="物资名称" prop="materialName" align="center" />
-            <el-table-column label="数量" prop="eachAmount" align="center" />
+            <el-table-column label="单价" align="center">
+              <template #default="{row}">
+                {{ row.eachAmount ? `¥${row.eachAmount}` : '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="数量" prop="quantity" align="center">
+              <template #default="{row}">
+                {{ row.quantity || 1 }}
+              </template>
+            </el-table-column>
             <el-table-column label="备注" prop="remark" align="center" />
           </el-table>
         </div>
@@ -213,9 +222,14 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="数量" align="center" width="150">
+            <el-table-column label="单价" align="center" width="120">
               <template #default="{row}">
                 <el-input-number v-model="row.eachAmount" :min="0.01" :precision="2" style="width: 100%" />
+              </template>
+            </el-table-column>
+            <el-table-column label="数量" align="center" width="120">
+              <template #default="{row}">
+                <el-input-number v-model="row.quantity" :min="1" :precision="0" style="width: 100%" :default-value="1" />
               </template>
             </el-table-column>
             <el-table-column label="备注" align="center">
@@ -253,7 +267,7 @@ import {
 import { listSuppliers } from '@/api/supplier'
 import { listUsers } from '@/api/user'
 import { listAccounts } from '@/api/account'
-import { getMaterialPage } from '@/api/material'
+import { listMaterials } from '@/api/material'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 // 列表数据
@@ -388,7 +402,7 @@ const getAccountOptions = async () => {
 // 获取物资选项
 const getMaterialOptions = async () => {
   try {
-    const response = await getMaterialPage({ current: 1, size: 100 })
+    const response = await listMaterials({ current: 1, size: 100 })
     materialOptions.value = response.data.records || []
   } catch (error) {
     console.error('获取物资选项失败:', error)
@@ -452,7 +466,8 @@ const addItem = () => {
   temp.items.push({
     accountId: temp.accountId,
     inoutItemId: undefined,
-    eachAmount: 1,
+    eachAmount: 0,
+    quantity: 1,
     remark: ''
   })
 }
@@ -493,9 +508,19 @@ const createData = async () => {
         return
       }
       if (!item.eachAmount || item.eachAmount <= 0) {
+        ElMessage.warning('请输入有效的采购单价')
+        return
+      }
+      if (!item.quantity || item.quantity <= 0) {
         ElMessage.warning('请输入有效的采购数量')
         return
       }
+      
+      // 将数量值保存到eachAmount字段，用于后端处理
+      const price = item.eachAmount
+      item.eachAmount = item.quantity
+      // 保存单价到quantity字段，仅用于前端展示
+      item.quantity = price
     }
     
     const response = await createProcurement(temp)
@@ -562,9 +587,19 @@ const updateData = async () => {
         return
       }
       if (!item.eachAmount || item.eachAmount <= 0) {
+        ElMessage.warning('请输入有效的采购单价')
+        return
+      }
+      if (!item.quantity || item.quantity <= 0) {
         ElMessage.warning('请输入有效的采购数量')
         return
       }
+      
+      // 将数量值保存到eachAmount字段，用于后端处理
+      const price = item.eachAmount
+      item.eachAmount = item.quantity
+      // 保存单价到quantity字段，仅用于前端展示
+      item.quantity = price
     }
     
     const response = await updateProcurement(temp.id, temp)

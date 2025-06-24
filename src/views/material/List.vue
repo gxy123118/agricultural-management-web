@@ -196,7 +196,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import {
-  getMaterialPage,
+  listMaterials,
   addMaterial,
   updateMaterial,
   deleteMaterial,
@@ -275,7 +275,7 @@ const dialogStatus = ref('')
 const getList = async () => {
   listLoading.value = true
   try {
-    const response = await getMaterialPage(listQuery)
+    const response = await listMaterials(listQuery)
     list.value = response.data.records
     total.value = response.data.total
   } catch (error) {
